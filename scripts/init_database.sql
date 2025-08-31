@@ -1,42 +1,31 @@
-/*
-=============================================================
-Create Database and Schemas
-=============================================================
-Script Purpose:
-    This script creates a new database named 'DataWarehouse' after checking if it already exists. 
-    If the database exists, it is dropped and recreated. Additionally, the script sets up three schemas 
-    within the database: 'bronze', 'silver', and 'gold'.
-	
-WARNING:
-    Running this script will drop the entire 'DataWarehouse' database if it exists. 
-    All data in the database will be permanently deleted. Proceed with caution 
-    and ensure you have proper backups before running this script.
-*/
+-- ============================================================================
+-- Drop and recreate the 'datawarehouse' database
+-- (⚠️ Must be run outside a transaction in Postgres)
+-- ============================================================================
 
-USE master;
-GO
-
--- Drop and recreate the 'DataWarehouse' database
-IF EXISTS (SELECT 1 FROM sys.databases WHERE name = 'DataWarehouse')
+-- Terminate active connections and drop DB if it exists
+DO
+$$
 BEGIN
-    ALTER DATABASE DataWarehouse SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE DataWarehouse;
-END;
-GO
+   IF EXISTS (SELECT FROM pg_database WHERE datname = 'datawarehouse') THEN
+      PERFORM pg_terminate_backend(pid)
+      FROM pg_stat_activity
+      WHERE datname = 'datawarehouse'
+        AND pid <> pg_backend_pid();
+      EXECUTE 'DROP DATABASE datawarehouse';
+   END IF;
+END
+$$;
 
--- Create the 'DataWarehouse' database
-CREATE DATABASE DataWarehouse;
-GO
+-- Create the database
+CREATE DATABASE datawarehouse;
 
-USE DataWarehouse;
-GO
+-- ============================================================================
+-- Create Schemas inside 'datawarehouse'
+-- (Run this AFTER connecting to the 'datawarehouse' DB)
+-- ============================================================================
+\c datawarehouse;
 
--- Create Schemas
-CREATE SCHEMA bronze;
-GO
-
-CREATE SCHEMA silver;
-GO
-
-CREATE SCHEMA gold;
-GO
+CREATE SCHEMA IF NOT EXISTS bronze;
+CREATE SCHEMA IF NOT EXISTS silver;
+CREATE SCHEMA IF NOT EXISTS gold;
